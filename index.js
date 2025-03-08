@@ -25,22 +25,18 @@ app.post('/books', async (req, res) => {
                 });
             }
         const newBook = {
-            title: request.body.title,
-            author: request.body.author,
-            publishYear: request.body.publishYear,
+            title: req.body.title,
+            author: req.body.author,
+            publishYear: req.body.publishYear,
         };
 
         const book = await Book.create(newBook);
     
         return res.status(201).send(book);
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).send({ message: err.message })
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send({ message: error.message })
     }
-});
-
-app.listen(PORT, () => {
-    console.log(`App is listening to port: ${PORT}`);
 });
 
 mongoose
