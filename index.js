@@ -7,10 +7,7 @@ import booksRoute from './routes/booksRoute.js';
 const app = express();
 
 app.use(express.json());
-app.use(cors({
-  origin: 'bookstore-mern-stack-frontend-pi.vercel.app',  // Your frontend URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}));
+app.use(cors());
 
 app.use('/books', booksRoute);
 
