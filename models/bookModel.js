@@ -10,6 +10,12 @@ const bookSchema = mongoose.Schema(
         type: String,
         default: '',
       },
+      secondaryImage: { 
+        type: String, 
+        default: '' },
+      secondaryImagePublicId: { 
+        type: String, 
+        default: '' },
       descriptiveName: {
         type: String,
         required: true,

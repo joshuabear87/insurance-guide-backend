@@ -5,50 +5,67 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Cloudinary configuration (you can use .env values)
 cloudinaryV2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Set up multer storage engine to buffer images
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
 
-// Cloudinary upload function
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
+// Accept named fields: image and secondaryImage
+const imageUpload = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'secondaryImage', maxCount: 1 }
+]);
+
 const uploadToCloudinary = (fileBuffer) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinaryV2.uploader.upload_stream(
-      { resource_type: 'auto' }, // auto detects image format
+      { resource_type: 'auto' },
       (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
+        if (error) reject(error);
+        else resolve(result);
       }
     );
 
-    // Convert the file buffer into a readable stream and pipe it to Cloudinary
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 };
 
-// Middleware to handle file uploads
 const cloudinaryUpload = async (req, res, next) => {
-  if (!req.file) {
-    return next(); // If no file, move to next middleware
+  if (!req.files || (!req.files.image && !req.files.secondaryImage)) {
+    return next(); // No images uploaded
   }
 
   try {
-    const result = await uploadToCloudinary(req.file.buffer);
-    req.fileUrl = result.secure_url;      
-    req.filePublicId = result.public_id;     
+    req.fileUrls = [];
+    req.filePublicIds = [];
+
+    const allFiles = [...(req.files.image || []), ...(req.files.secondaryImage || [])];
+
+    for (const file of allFiles) {
+      const result = await uploadToCloudinary(file.buffer);
+      req.fileUrls.push(result.secure_url);
+      req.filePublicIds.push(result.public_id);
+    }
+
     next();
   } catch (error) {
     res.status(500).json({ message: 'Error uploading to Cloudinary', error });
   }
 };
 
-export { upload, cloudinaryUpload };
+export { imageUpload, cloudinaryUpload };
