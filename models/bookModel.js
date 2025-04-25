@@ -1,24 +1,59 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const bookSchema = mongoose.Schema(
     {
-        title: {
-            type: String,
-            required: true
-        },
-        author: {
-            type: String,
-            required: true
-        },
-        publishYear: {
-            type: Number,
-            required: true
-        },
+      image: {
+        type: String,
+        default: '',
+      },
+      imagePublicId: {
+        type: String,
+        default: '',
+      },
+      descriptiveName: {
+        type: String,
+        required: true,
+      },
+      payerName: {
+        type: String,
+        required: true,
+      },
+      payerCode: {
+        type: Number,
+        required: true,
+      },
+      planName: {
+        type: String,
+        required: true,
+      },
+      planCode: {
+        type: Number,
+        required: true,
+      },
+      financialClass: {
+        type: String,
+        required: true,
+        enum: ['Medi-Cal', 'Medicare', 'Commercial'],
+      },
+      samcContracted: {
+        type: String,
+        required: true,
+        enum: ['Yes', 'No', 'Must call to confirm'],
+      },
+      samfContracted: {
+        type: String,
+        required: true,
+        enum: ['Yes', 'No', 'Must call to confirm'],
+      },
+      notes: {
+        type: String,
+        default: '',
+      },
     },
-        {
-            timestamps: true,
-        }
-)
+    {
+      timestamps: true,
+    }
+  );
 
-export const Book = mongoose.model('Cat', bookSchema);
-
+const Book = mongoose.model('InsuranceEntry', bookSchema);
+export { Book };

@@ -9,13 +9,20 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+app.use('/uploads', express.static('uploads'));
+
 app.use('/books', booksRoute);
 
 mongoose
   .connect(mongoDBURL)
   .then(() => {
-    const port = process.env.PORT || PORT;
     console.log('App connected to database');
+
+    mongoose.connection.on('connected', () => {
+      console.log(`✅ Connected to MongoDB database: ${mongoose.connection.client.s.options.dbName}`);
+    });
+
+    const port = process.env.PORT || PORT;
     app.listen(port, '0.0.0.0', () => {
       console.log(`App is listening on port: ${port}`);
     });
