@@ -2,11 +2,13 @@ import express from 'express';
 import { Book } from '../models/bookModel.js';
 import { imageUpload, cloudinaryUpload } from '../middleware/upload.js';
 import { v2 as cloudinaryV2 } from 'cloudinary';
+import { protect } from '../middleware/authMiddleware.js';
+
 
 const router = express.Router();
 
 // CREATE NEW BOOK (With Cloudinary Upload)
-router.post('/', imageUpload, cloudinaryUpload, async (req, res) => {
+router.post('/', protect, imageUpload, cloudinaryUpload, async (req, res) => {
   const {
     descriptiveName,
     payerName,
@@ -71,7 +73,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // UPDATE BOOK (Replace Image if New One Provided)
-router.put('/:id', imageUpload, cloudinaryUpload, async (req, res) => {
+router.put('/:id', protect, imageUpload, cloudinaryUpload, async (req, res) => {
   try {
     const { id } = req.params;
     const existingBook = await Book.findById(id);
@@ -109,7 +111,7 @@ router.put('/:id', imageUpload, cloudinaryUpload, async (req, res) => {
 });
 
 // DELETE A BOOK (Also Deletes Cloudinary Images)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
   try {
     const { id } = req.params;
     const book = await Book.findById(id);
