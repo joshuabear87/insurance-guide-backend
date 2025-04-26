@@ -8,7 +8,7 @@ const router = express.Router();
 
 
 const adminUser = {
-  username: 'joshuabear',
+  username: 'joshuabear87@gmail.com',
   passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10)
 };
 
