@@ -3,13 +3,18 @@ import { PORT, mongoDBURL } from './config.js';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import booksRoute from './routes/booksRoute.js';
-import authRoutes from './routes/authRoutes.js'
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 
-app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  credentials: true
+}));
 
+app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 app.use('/auth', authRoutes);
