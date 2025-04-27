@@ -39,7 +39,6 @@ const bookSchema = mongoose.Schema(
       financialClass: {
         type: String,
         required: true,
-        enum: ['Medi-Cal', 'Medicare', 'Commercial'],
       },
       samcContracted: {
         type: String,

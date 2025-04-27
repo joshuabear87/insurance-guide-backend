@@ -4,40 +4,42 @@ import { imageUpload, cloudinaryUpload } from '../middleware/upload.js';
 import { v2 as cloudinaryV2 } from 'cloudinary';
 import { protect } from '../middleware/authMiddleware.js';
 
-
 const router = express.Router();
 
-// CREATE NEW BOOK (With Cloudinary Upload)
-router.post('/', protect, imageUpload, cloudinaryUpload, async (req, res) => {
-  const {
-    descriptiveName,
-    payerName,
-    payerCode,
-    planName,
-    planCode,
-    financialClass,
-    samcContracted,
-    samfContracted,
-    notes,
-  } = req.body;
-
-  const newBook = new Book({
-    descriptiveName,
-    payerName,
-    payerCode,
-    planName,
-    planCode,
-    financialClass,
-    samcContracted,
-    samfContracted,
-    notes,
-    image: req.fileUrls?.[0] || '',
-    imagePublicId: req.filePublicIds?.[0] || '',
-    secondaryImage: req.fileUrls?.[1] || '',
-    secondaryImagePublicId: req.filePublicIds?.[1] || '',
-  });
-
+router.post('/', protect, async (req, res) => {
   try {
+    const {
+      descriptiveName,
+      payerName,
+      payerCode,
+      planName,
+      planCode,
+      financialClass,
+      samcContracted,
+      samfContracted,
+      notes,
+      image,
+      secondaryImage,
+      imagePublicId,
+      secondaryImagePublicId,
+    } = req.body;
+
+    const newBook = new Book({
+      descriptiveName,
+      payerName,
+      payerCode,
+      planName,
+      planCode,
+      financialClass,
+      samcContracted,
+      samfContracted,
+      notes,
+      image: image || '',
+      imagePublicId: imagePublicId || '',
+      secondaryImage: secondaryImage || '',
+      secondaryImagePublicId: secondaryImagePublicId || '',
+    });
+
     const savedBook = await newBook.save();
     res.status(201).json(savedBook);
   } catch (error) {
@@ -45,7 +47,6 @@ router.post('/', protect, imageUpload, cloudinaryUpload, async (req, res) => {
   }
 });
 
-// GET ALL BOOKS
 router.get('/', async (req, res) => {
   try {
     const books = await Book.find({});
@@ -58,7 +59,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET SINGLE BOOK
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -72,8 +72,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// UPDATE BOOK (Replace Image if New One Provided)
-router.put('/:id', protect, imageUpload, cloudinaryUpload, async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
   try {
     const { id } = req.params;
     const existingBook = await Book.findById(id);
@@ -81,25 +80,49 @@ router.put('/:id', protect, imageUpload, cloudinaryUpload, async (req, res) => {
       return res.status(404).json({ message: 'Book not found' });
     }
 
-    // If new images uploaded, delete old ones from Cloudinary
-    if (req.fileUrls?.[0] && existingBook.imagePublicId) {
+    const {
+      descriptiveName,
+      payerName,
+      payerCode,
+      planName,
+      planCode,
+      financialClass,
+      samcContracted,
+      samfContracted,
+      notes,
+      image,
+      secondaryImage,
+      imagePublicId,
+      secondaryImagePublicId,
+    } = req.body;
+
+    if (!image && existingBook.imagePublicId) {
       await cloudinaryV2.uploader.destroy(existingBook.imagePublicId);
-    }
-    if (req.fileUrls?.[1] && existingBook.secondaryImagePublicId) {
-      await cloudinaryV2.uploader.destroy(existingBook.secondaryImagePublicId);
+      existingBook.image = '';
+      existingBook.imagePublicId = '';
     }
 
-    const updatedBook = await Book.findByIdAndUpdate(
-      id,
-      {
-        ...req.body,
-        image: req.fileUrls?.[0] || existingBook.image,
-        imagePublicId: req.filePublicIds?.[0] || existingBook.imagePublicId,
-        secondaryImage: req.fileUrls?.[1] || existingBook.secondaryImage,
-        secondaryImagePublicId: req.filePublicIds?.[1] || existingBook.secondaryImagePublicId,
-      },
-      { new: true }
-    );
+    if (!secondaryImage && existingBook.secondaryImagePublicId) {
+      await cloudinaryV2.uploader.destroy(existingBook.secondaryImagePublicId);
+      existingBook.secondaryImage = '';
+      existingBook.secondaryImagePublicId = '';
+    }
+
+    existingBook.descriptiveName = descriptiveName;
+    existingBook.payerName = payerName;
+    existingBook.payerCode = payerCode;
+    existingBook.planName = planName;
+    existingBook.planCode = planCode;
+    existingBook.financialClass = financialClass;
+    existingBook.samcContracted = samcContracted;
+    existingBook.samfContracted = samfContracted;
+    existingBook.notes = notes;
+    existingBook.image = image || existingBook.image;
+    existingBook.imagePublicId = imagePublicId || existingBook.imagePublicId;
+    existingBook.secondaryImage = secondaryImage || existingBook.secondaryImage;
+    existingBook.secondaryImagePublicId = secondaryImagePublicId || existingBook.secondaryImagePublicId;
+
+    const updatedBook = await existingBook.save();
 
     res.status(200).json({
       message: 'Book updated successfully',
@@ -110,7 +133,6 @@ router.put('/:id', protect, imageUpload, cloudinaryUpload, async (req, res) => {
   }
 });
 
-// DELETE A BOOK (Also Deletes Cloudinary Images)
 router.delete('/:id', protect, async (req, res) => {
   try {
     const { id } = req.params;
@@ -119,7 +141,6 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Book not found' });
     }
 
-    // Delete Cloudinary images
     if (book.imagePublicId) {
       await cloudinaryV2.uploader.destroy(book.imagePublicId);
     }
