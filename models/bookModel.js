@@ -44,12 +44,10 @@ const bookSchema = mongoose.Schema(
       samcContracted: {
         type: String,
         required: true,
-        enum: ['Yes', 'No', 'Must call to confirm'],
       },
       samfContracted: {
         type: String,
         required: true,
-        enum: ['Yes', 'No', 'Must call to confirm'],
       },
       notes: {
         type: String,
