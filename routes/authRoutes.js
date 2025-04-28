@@ -1,32 +1,16 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
+import { registerUser, loginUser, forgotPassword, getUserProfile, updateUserProfile } from '../controllers/authController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
-dotenv.config();
 const router = express.Router();
 
+// Public Routes
+router.post('/register', registerUser);
+router.post('/login', loginUser);
+router.post('/forgot-password', forgotPassword);
 
-const adminUser = {
-  username: 'joshuabear87@gmail.com',
-  passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10)
-};
-
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  if (username !== adminUser.username) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  const isMatch = await bcrypt.compare(password, adminUser.passwordHash);
-  if (!isMatch) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-  res.json({ token });
-});
+// Private Routes (Logged in users only)
+router.get('/profile', protect, getUserProfile);
+router.put('/profile', protect, updateUserProfile);
 
 export default router;
