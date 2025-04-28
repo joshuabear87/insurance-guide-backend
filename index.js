@@ -6,6 +6,8 @@ import { PORT, mongoDBURL } from './config.js';
 import booksRoute from './routes/booksRoute.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import cookieParser from 'cookie-parser';
+
 
 dotenv.config();
 
@@ -16,6 +18,7 @@ app.use(cors({
   credentials: true,
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
