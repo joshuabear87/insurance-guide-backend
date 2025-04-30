@@ -94,6 +94,9 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', protect, async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('[PUT] Updating plan ID:', id);
+    console.log('[PUT] Request body:', req.body);
+
     const existingBook = await Book.findById(id);
     if (!existingBook) {
       return res.status(404).json({ message: 'Insurance plan not found' });
@@ -123,19 +126,35 @@ router.put('/:id', protect, async (req, res) => {
       secondaryImagePublicId,
     } = req.body;
 
-    // Handle image removal if necessary
-    if (!image && existingBook.imagePublicId) {
-      await cloudinaryV2.uploader.destroy(existingBook.imagePublicId.toString());
+    // 🔥 Safely delete front image if removed
+    if (!image || image.trim() === '') {
+      if (existingBook.imagePublicId) {
+        try {
+          await cloudinaryV2.uploader.destroy(existingBook.imagePublicId.toString());
+          console.log('✅ Front image deleted from Cloudinary');
+        } catch (err) {
+          console.error('❌ Cloudinary front image delete failed:', err.message);
+        }
+      }
       existingBook.image = '';
       existingBook.imagePublicId = '';
     }
-    if (!secondaryImage && existingBook.secondaryImagePublicId) {
-      await cloudinaryV2.uploader.destroy(existingBook.secondaryImagePublicId.toString());
+
+    // 🔥 Safely delete back image if removed
+    if (!secondaryImage || secondaryImage.trim() === '') {
+      if (existingBook.secondaryImagePublicId) {
+        try {
+          await cloudinaryV2.uploader.destroy(existingBook.secondaryImagePublicId.toString());
+          console.log('✅ Back image deleted from Cloudinary');
+        } catch (err) {
+          console.error('❌ Cloudinary back image delete failed:', err.message);
+        }
+      }
       existingBook.secondaryImage = '';
       existingBook.secondaryImagePublicId = '';
     }
 
-    // Update fields
+    // ✅ Update all fields
     existingBook.descriptiveName = descriptiveName;
     existingBook.prefix = prefix;
     existingBook.payerName = payerName;
@@ -158,13 +177,14 @@ router.put('/:id', protect, async (req, res) => {
     existingBook.secondaryImage = secondaryImage || existingBook.secondaryImage;
     existingBook.secondaryImagePublicId = secondaryImagePublicId || existingBook.secondaryImagePublicId;
 
-    const updatedBook = await existingBook.save();
-    res.status(200).json({
-      message: 'Insurance plan updated successfully',
-      data: updatedBook,
-    });
+    const updated = await existingBook.save();
+
+    console.log('✅ Insurance plan updated:', updated._id);
+    res.status(200).json({ message: 'Insurance plan updated successfully', data: updated });
+
   } catch (err) {
-    res.status(500).send({ message: err.message });
+    console.error('❌ PUT /books/:id failed:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -177,20 +197,32 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Insurance plan not found' });
     }
 
+    // ✅ Attempt to delete front image
     if (book.imagePublicId) {
-      await cloudinaryV2.uploader.destroy(book.imagePublicId.toString());
+      try {
+        await cloudinaryV2.uploader.destroy(book.imagePublicId);
+        console.log('✅ Front image deleted from Cloudinary');
+      } catch (err) {
+        console.error('❌ Error deleting front image:', err.message);
+      }
     }
+
+    // ✅ Attempt to delete back image
     if (book.secondaryImagePublicId) {
-      await cloudinaryV2.uploader.destroy(book.secondaryImagePublicId.toString());
+      try {
+        await cloudinaryV2.uploader.destroy(book.secondaryImagePublicId);
+        console.log('✅ Back image deleted from Cloudinary');
+      } catch (err) {
+        console.error('❌ Error deleting back image:', err.message);
+      }
     }
 
     await book.deleteOne();
+    res.status(200).json({ message: 'Insurance plan deleted successfully' });
 
-    res.status(200).json({
-      message: 'Insurance plan deleted successfully',
-    });
   } catch (err) {
-    res.status(500).send({ message: err.message });
+    console.error('❌ DELETE /books/:id failed:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
