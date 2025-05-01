@@ -10,7 +10,7 @@ router.post('/', protect, async (req, res) => {
   try {
     const {
       descriptiveName,
-      prefix,
+      prefixes,
       payerName,
       payerCode,
       planName,
@@ -34,7 +34,7 @@ router.post('/', protect, async (req, res) => {
 
     const newBook = new Book({
       descriptiveName,
-      prefix,
+      prefixes,
       payerName,
       payerCode,
       planName,
@@ -104,7 +104,7 @@ router.put('/:id', protect, async (req, res) => {
 
     const {
       descriptiveName,
-      prefix,
+      prefixes,
       payerName,
       payerCode,
       planName,
@@ -126,7 +126,6 @@ router.put('/:id', protect, async (req, res) => {
       secondaryImagePublicId,
     } = req.body;
 
-    // 🔥 Safely delete front image if removed
     if (!image || image.trim() === '') {
       if (existingBook.imagePublicId) {
         try {
@@ -140,7 +139,6 @@ router.put('/:id', protect, async (req, res) => {
       existingBook.imagePublicId = '';
     }
 
-    // 🔥 Safely delete back image if removed
     if (!secondaryImage || secondaryImage.trim() === '') {
       if (existingBook.secondaryImagePublicId) {
         try {
@@ -154,9 +152,8 @@ router.put('/:id', protect, async (req, res) => {
       existingBook.secondaryImagePublicId = '';
     }
 
-    // ✅ Update all fields
     existingBook.descriptiveName = descriptiveName;
-    existingBook.prefix = prefix;
+    existingBook.prefixes = prefixes;
     existingBook.payerName = payerName;
     existingBook.payerCode = payerCode;
     existingBook.planName = planName;
