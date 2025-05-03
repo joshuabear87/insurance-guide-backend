@@ -10,8 +10,8 @@ router.post('/login', loginUser);
 router.post('/forgot-password', forgotPassword);
 
 // Private Routes (Logged in users only)
-router.get('/profile', protect, getUserProfile);
-router.put('/profile', protect, updateUserProfile);
+router.get('/me', protect, getUserProfile);
+router.put('/update', protect, updateUserProfile);
 router.post('/refresh', refreshAccessToken);
 router.post('/logout', logoutUser);
 

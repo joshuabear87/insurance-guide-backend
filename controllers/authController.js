@@ -190,15 +190,18 @@ export const approveUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
 
-    if (user) {
-      user.isApproved = true;
-      await user.save();
-      res.json({ message: 'User approved successfully' });
-    } else {
-      res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    user.isApproved = true;
+    user.status = 'approved'; // ✅ add this line
+
+    await user.save();
+    res.json({ message: 'User approved successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error approving user:', error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 

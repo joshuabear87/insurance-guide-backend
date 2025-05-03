@@ -2,38 +2,45 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import User from '../models/userModel.js';
-import { mongoDBURL } from '../config.js'; // Update if your config file is named differently
 
-dotenv.config();
+dotenv.config(); // Loads the .env file
+
+const MONGO_URI = process.env.MONGO_URI;
 
 const createSuperAdmin = async () => {
   try {
-    await mongoose.connect(mongoDBURL);
+    await mongoose.connect(MONGO_URI);
 
-    const email = 'admin@example.com'; // Set your superadmin email
-    const password = 'SuperSecurePassword123'; // Set your superadmin password
+    const email = 'admin@example.com';
+    const password = 'SuperSecurePassword123';
 
-    const existingAdmin = await User.findOne({ email });
+    let user = await User.findOne({ email });
 
-    if (existingAdmin) {
-      console.log('✅ Super Admin already exists');
+    if (user) {
+      user.password = await bcrypt.hash(password, 10);
+      user.isApproved = true;
+      user.status = 'approved';
+      user.role = 'admin';
+      user.facilityName = user.facilityName || 'Default Admin Org';
+      await user.save();
+      console.log('✅ Admin user restored');
     } else {
       const hashedPassword = await bcrypt.hash(password, 10);
-
-      const superAdmin = await User.create({
+      await User.create({
         username: 'Super Admin',
-        email: email,
+        email,
         password: hashedPassword,
         role: 'admin',
         isApproved: true,
+        status: 'approved',
+        facilityName: 'Default Admin Org',
       });
-
-      console.log('🚀 Super Admin created successfully:', superAdmin.email);
+      console.log('✅ Admin user created');
     }
 
     process.exit();
-  } catch (error) {
-    console.error('Error creating Super Admin:', error);
+  } catch (err) {
+    console.error('❌ Failed to restore admin:', err);
     process.exit(1);
   }
 };

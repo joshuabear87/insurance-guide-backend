@@ -7,6 +7,8 @@ import booksRoute from './routes/booksRoute.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import cookieParser from 'cookie-parser';
+import requestUpdateRoutes from './routes/requestUpdateRoutes.js';
+
 
 
 dotenv.config();
@@ -22,6 +24,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
+app.use('/api/request-update', requestUpdateRoutes);
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes); 
 app.use('/books', booksRoute);
