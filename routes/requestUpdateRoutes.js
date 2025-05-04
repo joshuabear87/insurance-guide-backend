@@ -19,17 +19,19 @@ router.post('/', protect, async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD,
       },
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_USERNAME,
       to: emails,
       subject: 'New Insurance Update Request',
       text: `From: ${name}\n\n${message}`,
     };
+
+    console.log('📧 Sending email to:', emails); // Optional debug
 
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: 'Email sent successfully.' });

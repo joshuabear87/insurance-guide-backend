@@ -1,13 +1,15 @@
+// authMiddleware.js
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 // Middleware: Protect Routes
-export const protect = async (req, res, next) => {
+export const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn('🔒 Missing or malformed token');
     return res.status(401).json({ message: 'Unauthorized, no token' });
   }
 
@@ -19,25 +21,27 @@ export const protect = async (req, res, next) => {
     req.user = {
       id: decoded.id,
       email: decoded.email,
-      role: decoded.role,  
+      role: decoded.role,
     };
 
     next();
   } catch (err) {
-    console.error('Token verification failed:', err);
+    console.error('❌ Token verification failed:', err.message);
     res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 
 // Middleware: Admin Check
-export const admin = async (req, res, next) => {
-  try {
-    if (req.user && req.user.role === 'admin') {  
-      next();
-    } else {
-      res.status(403).json({ message: 'Admin access required' });
-    }
-  } catch (error) {
-    res.status(403).json({ message: 'Not authorized as admin' });
+export const admin = (req, res, next) => {
+  if (!req.user) {
+    console.warn('⚠️ No user info attached to request');
+    return res.status(401).json({ message: 'Unauthorized' });
   }
+
+  if (req.user.role !== 'admin') {
+    console.warn(`🚫 Access denied: User ${req.user.email} is not admin`);
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  next();
 };

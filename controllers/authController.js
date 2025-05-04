@@ -2,7 +2,10 @@ import User from '../models/userModel.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// Generate Access Token
+// Validate NPI
+const isValidNPI = (npi) => /^\d{10}$/.test(npi);
+
+// Token Generators
 const generateAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, email: user.email, role: user.role },
@@ -11,7 +14,6 @@ const generateAccessToken = (user) => {
   );
 };
 
-// Generate Refresh Token
 const generateRefreshToken = (user) => {
   return jwt.sign(
     { id: user._id, email: user.email, role: user.role },
@@ -20,16 +22,17 @@ const generateRefreshToken = (user) => {
   );
 };
 
-// Register New User
+// Register
 export const registerUser = async (req, res) => {
-  const { username, email, password, facilityName } = req.body;
+  const { username, email, password, facilityName, phoneNumber, department, npi } = req.body;
 
   try {
-    const userExists = await User.findOne({ email });
-
-    if (userExists) {
+    if (await User.findOne({ email })) {
       return res.status(400).json({ message: 'User already exists' });
     }
+
+    if (!phoneNumber) return res.status(400).json({ message: 'Phone number is required' });
+    if (!isValidNPI(npi)) return res.status(400).json({ message: 'Invalid NPI' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -37,38 +40,31 @@ export const registerUser = async (req, res) => {
       username,
       email,
       password: hashedPassword,
-      facilityName, // ✅ added
+      facilityName,
+      phoneNumber,
+      department,
+      npi,
       role: 'user',
       isApproved: false,
     });
 
     res.status(201).json({ message: 'Registration successful. Awaiting approval.' });
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Login User
+// Login
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
-
-    if (!user) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
-
-    if (!user.isApproved) {
-      return res.status(403).json({ message: 'Account pending approval' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
+    if (!user.isApproved) return res.status(403).json({ message: 'Account pending approval' });
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
@@ -77,7 +73,7 @@ export const loginUser = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
@@ -85,160 +81,198 @@ export const loginUser = async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
+      facilityName: user.facilityName,
+      phoneNumber: user.phoneNumber,
+      department: user.department,
+      npi: user.npi,
       accessToken,
     });
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Refresh Access Token
+// Refresh
 export const refreshAccessToken = (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-
-  if (!refreshToken) {
-    return res.status(401).json({ message: 'No refresh token provided' });
-  }
+  if (!refreshToken) return res.status(401).json({ message: 'No refresh token provided' });
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-
-    const newAccessToken = jwt.sign(
-      { id: decoded.id, email: decoded.email, role: decoded.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m' }
-    );
-
+    const newAccessToken = generateAccessToken(decoded);
     res.json({ accessToken: newAccessToken });
-  } catch (error) {
-    console.error('Refresh token error:', error);
+  } catch (err) {
+    console.error('Refresh token error:', err);
     res.status(403).json({ message: 'Invalid refresh token' });
   }
 };
 
-// Logout User
+// Logout
 export const logoutUser = (req, res) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'Strict',
   });
-
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
-// Forgot Password (placeholder)
+// Placeholder for password reset
 export const forgotPassword = (req, res) => {
   res.json({ message: 'Forgot password functionality coming soon.' });
 };
 
-// Get User Profile
+// Get own profile
 export const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
-
-    if (user) {
-      res.json(user);
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
+    if (user) res.json(user);
+    else res.status(404).json({ message: 'User not found' });
+  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Update User Profile
+// Update own profile
 export const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
 
-    if (user) {
-      user.username = req.body.username || user.username;
-      user.email = req.body.email || user.email;
-      if (req.body.password) {
-        user.password = await bcrypt.hash(req.body.password, 10);
-      }
-      const updatedUser = await user.save();
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-      res.json({
-        _id: updatedUser._id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        role: updatedUser.role,
-      });
-    } else {
-      res.status(404).json({ message: 'User not found' });
+    user.username = req.body.username || user.username;
+    user.email = req.body.email || user.email;
+    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+    user.department = req.body.department || user.department;
+
+    if (req.body.npi && req.body.npi !== user.npi) {
+      if (!isValidNPI(req.body.npi)) return res.status(400).json({ message: 'Invalid NPI' });
+      user.npi = req.body.npi;
     }
-  } catch (error) {
+
+    if (req.body.password) {
+      user.password = await bcrypt.hash(req.body.password, 10);
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      facilityName: updatedUser.facilityName,
+      phoneNumber: updatedUser.phoneNumber,
+      department: updatedUser.department,
+      npi: updatedUser.npi,
+    });
+  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Get All Users (Admin)
+// Admin actions
 export const getUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password');
+    const users = await User.find().select('-password');
     res.json(users);
-  } catch (error) {
+  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Approve User
 export const approveUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     user.isApproved = true;
-    user.status = 'approved'; // ✅ add this line
-
+    user.status = 'approved';
     await user.save();
+
     res.json({ message: 'User approved successfully' });
-  } catch (error) {
-    console.error('Error approving user:', error);
-    res.status(500).json({ message: error.message || 'Server error' });
-  }
-};
-
-// Promote User to Admin
-export const makeAdmin = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    if (user) {
-      user.role = 'admin';
-      await user.save();
-      res.json({ message: 'User promoted to admin' });
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
+  } catch (err) {
+    console.error('Error approving user:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Delete User
+export const makeAdmin = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.role = 'admin';
+    await user.save();
+    res.json({ message: 'User promoted to admin' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const demoteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role !== 'admin') return res.status(400).json({ message: 'User is not an admin' });
+
+    user.role = 'user';
+    await user.save();
+    res.json({ message: 'User demoted to regular user' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateUserByAdmin = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.username = req.body.username || user.username;
+    user.email = req.body.email || user.email;
+    user.facilityName = req.body.facilityName || user.facilityName;
+    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+    user.department = req.body.department || user.department;
+
+    if (req.body.npi && req.body.npi !== user.npi) {
+      if (!isValidNPI(req.body.npi)) return res.status(400).json({ message: 'Invalid NPI' });
+      user.npi = req.body.npi;
+    }
+
+    if (req.body.password) {
+      user.password = await bcrypt.hash(req.body.password, 10);
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      facilityName: updatedUser.facilityName,
+      phoneNumber: updatedUser.phoneNumber,
+      department: updatedUser.department,
+      npi: updatedUser.npi,
+    });
+  } catch (err) {
+    console.error('Admin update error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    if (user.email === 'admin@example.com') {
-      return res.status(403).json({ message: 'Cannot delete Super Admin account.' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.email === 'admin@example.com') return res.status(403).json({ message: 'Cannot delete Super Admin account.' });
 
     await user.deleteOne();
     res.json({ message: 'User deleted successfully' });
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 };
