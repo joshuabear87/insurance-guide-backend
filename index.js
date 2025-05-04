@@ -7,10 +7,8 @@ import booksRoute from './routes/booksRoute.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import cookieParser from 'cookie-parser';
-import requestUpdateRoutes from './routes/requestUpdateRoutes.js';
-import './jobs/sendWeeklyPDF.js'; // Auto-start cron job
-import sendEmail from './utils/sendEmail.js';
 import User from './models/userModel.js';
+import sendPdfRoutes from './routes/sendPdfRoutes.js'
 
 dotenv.config();
 
@@ -26,7 +24,7 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 // Routes
-app.use('/api/request-update', requestUpdateRoutes);
+app.use('/send-pdf', sendPdfRoutes);
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/books', booksRoute);
