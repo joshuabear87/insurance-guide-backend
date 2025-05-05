@@ -9,6 +9,7 @@ import userRoutes from './routes/userRoutes.js';
 import cookieParser from 'cookie-parser';
 import User from './models/userModel.js';
 import sendPdfRoutes from './routes/sendPdfRoutes.js'
+import requestUpdateRoute from './routes/requestUpdateRoute.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 // Routes
+app.use('/request-update', requestUpdateRoute);
 app.use('/send-pdf', sendPdfRoutes);
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
