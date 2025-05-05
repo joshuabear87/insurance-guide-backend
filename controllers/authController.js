@@ -1,6 +1,7 @@
 import User from '../models/userModel.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 
 // Validate NPI
 const isValidNPI = (npi) => /^\d{10}$/.test(npi);
@@ -118,11 +119,56 @@ export const logoutUser = (req, res) => {
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
-// Placeholder for password reset
-export const forgotPassword = (req, res) => {
-  res.json({ message: 'Forgot password functionality coming soon.' });
-};
+// password reset
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
 
+  try {
+    const user = await User.findOne({ email });
+
+    // Always respond with generic message to prevent user enumeration
+    if (!user) {
+      return res.status(200).json({ message: 'If your email exists, a password reset link has been sent.' });
+    }
+
+    // Generate a short-lived JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+
+    // Construct frontend URL with token
+    const resetLink = `https://insurance-guide-frontend.vercel.app/reset-password/${token}`;
+
+    // Setup mail transporter
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+
+    const mailOptions = {
+      from: `"HokenHub Support" <${process.env.EMAIL_USERNAME}>`,
+      to: email,
+      subject: 'Reset Your Password - HokenHub',
+      text: `Click the link to reset your password: ${resetLink}`,
+      html: `
+        <p>Hello,</p>
+        <p>You requested to reset your password. Please click the link below:</p>
+        <p><a href="${resetLink}">${resetLink}</a></p>
+        <p>This link will expire in 15 minutes.</p>
+        <p>If you did not request this, please ignore this email.</p>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Password reset email sent to ${email}: ${info.response}`);
+
+    res.status(200).json({ message: 'If your email exists, a password reset link has been sent.' });
+  } catch (err) {
+    console.error('❌ Forgot password error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 // Get own profile
 export const getUserProfile = async (req, res) => {
   try {
