@@ -119,7 +119,7 @@ export const logoutUser = (req, res) => {
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
-// password reset
+// Forgot Password
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -169,6 +169,39 @@ export const forgotPassword = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+// Reset Password
+export const resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+
+  if (!token || !password) {
+    return res.status(400).json({ message: 'Missing token or password' });
+  }
+
+  try {
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.status(200).json({ message: 'Password has been reset successfully' });
+  } catch (err) {
+    console.error('❌ Reset password error:', err);
+    if (err.name === 'TokenExpiredError') {
+      return res.status(400).json({ message: 'Reset link expired. Please request a new one.' });
+    }
+    res.status(500).json({ message: 'Failed to reset password' });
+  }
+};
+
+
 // Get own profile
 export const getUserProfile = async (req, res) => {
   try {
