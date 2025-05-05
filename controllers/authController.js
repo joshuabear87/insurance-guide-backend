@@ -119,88 +119,10 @@ export const logoutUser = (req, res) => {
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
-// Forgot Password
-export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
-  try {
-    const user = await User.findOne({ email });
-
-    // Always respond with generic message to prevent user enumeration
-    if (!user) {
-      return res.status(200).json({ message: 'If your email exists, a password reset link has been sent.' });
-    }
-
-    // Generate a short-lived JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-
-    // Construct frontend URL with token
-    const resetLink = `https://insurance-guide-frontend.vercel.app/reset-password/${token}`;
-
-    // Setup mail transporter
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-
-    const mailOptions = {
-      from: `"HokenHub Support" <${process.env.EMAIL_USERNAME}>`,
-      to: email,
-      subject: 'Reset Your Password - HokenHub',
-      text: `Click the link to reset your password: ${resetLink}`,
-      html: `
-        <p>Hello,</p>
-        <p>You requested to reset your password. Please click the link below:</p>
-        <p><a href="${resetLink}">${resetLink}</a></p>
-        <p>This link will expire in 15 minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-      `,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Password reset email sent to ${email}: ${info.response}`);
-
-    res.status(200).json({ message: 'If your email exists, a password reset link has been sent.' });
-  } catch (err) {
-    console.error('❌ Forgot password error:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
+// Placeholder for password reset
+export const forgotPassword = (req, res) => {
+  res.json({ message: 'Forgot password functionality coming soon.' });
 };
-
-// Reset Password
-export const resetPassword = async (req, res) => {
-  const { token, password } = req.body;
-
-  if (!token || !password) {
-    return res.status(400).json({ message: 'Missing token or password' });
-  }
-
-  try {
-    // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
-
-    await user.save();
-
-    res.status(200).json({ message: 'Password has been reset successfully' });
-  } catch (err) {
-    console.error('❌ Reset password error:', err);
-    if (err.name === 'TokenExpiredError') {
-      return res.status(400).json({ message: 'Reset link expired. Please request a new one.' });
-    }
-    res.status(500).json({ message: 'Failed to reset password' });
-  }
-};
-
 
 // Get own profile
 export const getUserProfile = async (req, res) => {

@@ -16,23 +16,10 @@ dotenv.config();
 const app = express();
 
 // Middleware
-const allowedOrigins = [
-  'https://insurance-guide-frontend.vercel.app',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: 'https://insurance-guide-frontend.vercel.app',
   credentials: true,
 }));
-
 app.use(cookieParser());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
