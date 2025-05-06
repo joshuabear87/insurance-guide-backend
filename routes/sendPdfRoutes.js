@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
     }, token);
     console.log('📦 JWT injected into localStorage');
 
-    const targetUrl = 'https://insurance-guide-frontend.vercel.app/printable-page';
+    const targetUrl = `https://insurance-guide-frontend.vercel.app/printable-page?accessToken=${token}`;
     console.log(`🌐 Navigating to: ${targetUrl}`);
     await page.goto(targetUrl, { waitUntil: 'networkidle0' });
 
