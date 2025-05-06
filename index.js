@@ -2,24 +2,27 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import { PORT, mongoDBURL } from './config.js';
+
 import booksRoute from './routes/booksRoute.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import cookieParser from 'cookie-parser';
-import User from './models/userModel.js';
-import sendPdfRoutes from './routes/sendPdfRoutes.js'
+import adminRoutes from './routes/adminRoutes.js';
+import sendPdfRoutes from './routes/sendPdfRoutes.js';
 import requestUpdateRoute from './routes/requestUpdateRoute.js';
-import adminRoutes from './routes/adminRoutes.js'
+
 import sendEmail from './util/sendEmail.js';
+import User from './models/userModel.js';
 
 dotenv.config();
 
 const app = express();
 
+// ✅ Required for trusting proxy headers in Render/Vercel
 app.set('trust proxy', 1);
 
-// Middleware
+// ✅ CORS setup
 const allowedOrigins = [
   'https://insurance-guide-frontend.vercel.app',
   'http://localhost:3000',
@@ -37,19 +40,20 @@ app.use(cors({
   credentials: true,
 }));
 
+// ✅ Essential middleware
 app.use(cookieParser());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-// Routes
-app.use('/admin', adminRoutes);
-app.use('/request-update', requestUpdateRoute);
-app.use('/send-pdf', sendPdfRoutes);
+// ✅ All routes
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/books', booksRoute);
+app.use('/admin', adminRoutes);
+app.use('/send-pdf', sendPdfRoutes);
+app.use('/request-update', requestUpdateRoute);
 
-// Manual test route for email functionality
+// ✅ Manual test email route (optional, safe to keep for now)
 app.get('/send-test-email', async (req, res) => {
   try {
     const admins = await User.find({ role: 'admin', isApproved: true });
@@ -70,7 +74,7 @@ app.get('/send-test-email', async (req, res) => {
   }
 });
 
-// MongoDB connection and server start
+// ✅ MongoDB connection and app start
 mongoose.connect(mongoDBURL)
   .then(() => {
     console.log('✅ App connected to database');
