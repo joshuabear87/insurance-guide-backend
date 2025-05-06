@@ -11,6 +11,7 @@ import User from './models/userModel.js';
 import sendPdfRoutes from './routes/sendPdfRoutes.js'
 import requestUpdateRoute from './routes/requestUpdateRoute.js';
 import adminRoutes from './routes/adminRoutes.js'
+import sendEmail from './util/sendEmail.js';
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ app.get('/send-test-email', async (req, res) => {
     res.status(500).send('❌ Email send failed');
   }
 });
+
 // MongoDB connection and server start
 mongoose.connect(mongoDBURL)
   .then(() => {
