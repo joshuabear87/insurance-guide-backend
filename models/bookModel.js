@@ -20,7 +20,7 @@ const contractSchema = new mongoose.Schema(
     contractStatus: {
       type: String,
       required: true,
-      enum: ['Contracted', 'Not Contracted', 'Must Call to Confirm'],
+      enum: ['Contracted', 'Not Contracted', 'Must Call', 'See Notes'],
     },
   },
   { _id: false } // Don't create an ID for each contract line
