@@ -11,8 +11,28 @@ const addressSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const contractSchema = new mongoose.Schema(
+  {
+    facilityName: {
+      type: String,
+      required: true,
+    },
+    contractStatus: {
+      type: String,
+      required: true,
+      enum: ['Contracted', 'Not Contracted', 'Must Call to Confirm'],
+    },
+  },
+  { _id: false } // Don't create an ID for each contract line
+);
+
 const bookSchema = mongoose.Schema(
   {
+    facilityName: {
+      type: String,
+      required: true,
+      enum: ['Saint Agnes Medical Center', 'Saint Alphonsus Health System'],
+    },
     image: { type: String, default: '' },
     imagePublicId: { type: String, default: '' },
     secondaryImage: { type: String, default: '' },
@@ -31,8 +51,6 @@ const bookSchema = mongoose.Schema(
       min: [0, 'Plan Code must be a positive number'],
     },
     financialClass: { type: String, required: true },
-    samcContracted: { type: String, required: true },
-    samfContracted: { type: String, required: true },
     notes: { type: String, default: '' },
     authorizationNotes: { type: String, default: '' },
     ipaPayerId: { type: String, default: '' },
@@ -65,6 +83,8 @@ const bookSchema = mongoose.Schema(
         },
       },
     ],
+    // New field to hold contract information for multiple facilities
+    facilityContracts: [contractSchema],  // This will allow adding multiple contracts
   },
   {
     timestamps: true,

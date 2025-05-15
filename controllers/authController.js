@@ -1,15 +1,20 @@
 import User from '../models/userModel.js';
+import Facility from '../models/facilityModel.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 
-// Validate NPI
 const isValidNPI = (npi) => /^\d{10}$/.test(npi);
 
-// Token Generators
-const generateAccessToken = (user) => {
+const generateAccessToken = (user, activeFacility) => {
   return jwt.sign(
-    { id: user._id, email: user.email, role: user.role },
+    {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      activeFacility,
+      facilityAccess: user.facilityAccess,
+    },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
@@ -17,15 +22,19 @@ const generateAccessToken = (user) => {
 
 const generateRefreshToken = (user) => {
   return jwt.sign(
-    { id: user._id, email: user.email, role: user.role },
+    {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      facilityAccess: user.facilityAccess,
+    },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: '7d' }
   );
 };
 
-// Register
 export const registerUser = async (req, res) => {
-  const { username, email, password, facilityName, phoneNumber, department, npi } = req.body;
+  const { firstName, lastName, email, password, requestedFacility, phoneNumber, department, npi } = req.body;
 
   try {
     if (await User.findOne({ email })) {
@@ -33,15 +42,24 @@ export const registerUser = async (req, res) => {
     }
 
     if (!phoneNumber) return res.status(400).json({ message: 'Phone number is required' });
+    if (!requestedFacility) return res.status(400).json({ message: 'Facility is required' });
+
+    const facilityExists = await Facility.findOne({ name: requestedFacility });
+    if (!facilityExists) {
+      return res.status(400).json({ message: 'Invalid facility selection' });
+    }
+
     if (!isValidNPI(npi)) return res.status(400).json({ message: 'Invalid NPI' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      username,
+      firstName,
+      lastName,
       email,
       password: hashedPassword,
-      facilityName,
+      requestedFacility,
+      facilityAccess: [],
       phoneNumber,
       department,
       npi,
@@ -56,18 +74,24 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// Login
 export const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, activeFacility } = req.body;
 
   try {
     const user = await User.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
-    if (!user.isApproved) return res.status(403).json({ message: 'Account pending approval' });
 
-    const accessToken = generateAccessToken(user);
+    if (!user.isApproved) {
+      return res.status(403).json({ message: 'Account pending approval' });
+    }
+
+    if (!user.facilityAccess.includes(activeFacility)) {
+      return res.status(403).json({ message: 'Access denied to selected facility' });
+    }
+
+    const accessToken = generateAccessToken(user, activeFacility);
     const refreshToken = generateRefreshToken(user);
 
     res.cookie('refreshToken', refreshToken, {
@@ -79,29 +103,40 @@ export const loginUser = async (req, res) => {
 
     res.json({
       _id: user._id,
-      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       role: user.role,
-      facilityName: user.facilityName,
+      facilityAccess: user.facilityAccess,
+      requestedFacility: user.requestedFacility,
       phoneNumber: user.phoneNumber,
       department: user.department,
       npi: user.npi,
+      activeFacility, // Added activeFacility here too
       accessToken,
     });
   } catch (err) {
-    console.error(err);
+    console.error('❗ Login error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Refresh
 export const refreshAccessToken = (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-  if (!refreshToken) return res.status(401).json({ message: 'No refresh token provided' });
+  const { activeFacility } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'No refresh token provided' });
+  }
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const newAccessToken = generateAccessToken(decoded);
+
+    if (!activeFacility || !decoded.facilityAccess?.includes(activeFacility)) {
+      return res.status(400).json({ message: 'Invalid or missing active facility' });
+    }
+
+    const newAccessToken = generateAccessToken(decoded, activeFacility);
     res.json({ accessToken: newAccessToken });
   } catch (err) {
     console.error('Refresh token error:', err);
@@ -109,7 +144,6 @@ export const refreshAccessToken = (req, res) => {
   }
 };
 
-// Logout
 export const logoutUser = (req, res) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
@@ -205,8 +239,23 @@ export const resetPassword = async (req, res) => {
 export const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
-    if (user) res.json(user);
-    else res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Explicitly return all relevant fields
+    res.json({
+      _id: user._id,
+      firstName: user.firstName,  // Updated to reflect firstName
+      lastName: user.lastName,    // Updated to reflect lastName
+      email: user.email,
+      role: user.role,
+      facilityAccess: user.facilityAccess,
+      requestedFacility: user.requestedFacility,
+      phoneNumber: user.phoneNumber,
+      department: user.department,
+      npi: user.npi,
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -216,10 +265,10 @@ export const getUserProfile = async (req, res) => {
 export const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    user.username = req.body.username || user.username;
+    user.firstName = req.body.firstName || user.firstName;  // Updated to reflect firstName
+    user.lastName = req.body.lastName || user.lastName;      // Updated to reflect lastName
     user.email = req.body.email || user.email;
     user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
     user.department = req.body.department || user.department;
@@ -227,6 +276,10 @@ export const updateUserProfile = async (req, res) => {
     if (req.body.npi && req.body.npi !== user.npi) {
       if (!isValidNPI(req.body.npi)) return res.status(400).json({ message: 'Invalid NPI' });
       user.npi = req.body.npi;
+    }
+
+    if (req.body.requestedFacility) {
+      user.requestedFacility = req.body.requestedFacility;
     }
 
     if (req.body.password) {
@@ -237,10 +290,12 @@ export const updateUserProfile = async (req, res) => {
 
     res.json({
       _id: updatedUser._id,
-      username: updatedUser.username,
+      firstName: updatedUser.firstName,  // Updated to reflect firstName
+      lastName: updatedUser.lastName,    // Updated to reflect lastName
       email: updatedUser.email,
       role: updatedUser.role,
-      facilityName: updatedUser.facilityName,
+      facilityAccess: updatedUser.facilityAccess,
+      requestedFacility: updatedUser.requestedFacility,
       phoneNumber: updatedUser.phoneNumber,
       department: updatedUser.department,
       npi: updatedUser.npi,
@@ -250,7 +305,6 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
-// Admin actions
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password');
@@ -260,18 +314,45 @@ export const getUsers = async (req, res) => {
   }
 };
 
+
 export const approveUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    const { approvedFacilities } = req.body;
+    if (!Array.isArray(approvedFacilities) || approvedFacilities.length === 0) {
+      return res.status(400).json({ message: 'Please select at least one facility to approve.' });
+    }
+
     user.isApproved = true;
     user.status = 'approved';
-    await user.save();
+    user.facilityAccess = approvedFacilities;
 
-    res.json({ message: 'User approved successfully' });
+    await user.save();
+    res.json({ message: 'User approved and facility access granted.' });
   } catch (err) {
     console.error('Error approving user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const approveFacilityAccess = async (req, res) => {
+  const { userId, facility } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.facilityAccess.includes(facility)) {
+      user.facilityAccess.push(facility);
+      user.isApproved = true;
+    }
+
+    await user.save();
+    res.json({ message: `Access to ${facility} granted.` });
+  } catch (err) {
+    console.error('❌ Facility approval error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -310,8 +391,13 @@ export const updateUserByAdmin = async (req, res) => {
 
     user.username = req.body.username || user.username;
     user.email = req.body.email || user.email;
-    user.facilityName = req.body.facilityName || user.facilityName;
-    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+    if (Array.isArray(req.body.facilityAccess)) {
+      user.facilityAccess = req.body.facilityAccess;
+    }
+    if (req.body.requestedFacility) {
+      user.requestedFacility = req.body.requestedFacility;
+    }
+        user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
     user.department = req.body.department || user.department;
 
     if (req.body.npi && req.body.npi !== user.npi) {

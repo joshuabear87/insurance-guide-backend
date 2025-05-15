@@ -2,8 +2,18 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema(
   {
-    username: { type: String, required: true },
-    facilityName: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    requestedFacility: {
+      type: [String],
+      enum: ['Saint Agnes Medical Center', 'Saint Alphonsus Health System'],
+      required: true,
+    },
+    facilityAccess: {
+      type: [String],
+      enum: ['Saint Agnes Medical Center', 'Saint Alphonsus Health System'],
+      default: [],
+    },
     email: {
       type: String,
       required: true,
@@ -11,7 +21,6 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email address'],
-
     },
     phoneNumber: { type: String, required: true },
     password: { type: String, required: true },
@@ -26,7 +35,7 @@ const userSchema = new mongoose.Schema(
     },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     isApproved: { type: Boolean, default: false },
-    status: { type: String, enum: ['pending', 'approved'], default: 'pending' }
+    status: { type: String, enum: ['pending', 'approved'], default: 'pending' },
   },
   { timestamps: true }
 );

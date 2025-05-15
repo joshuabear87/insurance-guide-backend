@@ -9,8 +9,8 @@ import booksRoute from './routes/booksRoute.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import sendPdfRoutes from './routes/sendPdfRoutes.js';
 import requestUpdateRoute from './routes/requestUpdateRoute.js';
+import facilityRoutes from './routes/facilityRoutes.js'
 
 import sendEmail from './util/sendEmail.js';
 import User from './models/userModel.js';
@@ -46,11 +46,11 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 // ✅ All routes
+app.use('/facilities', facilityRoutes);
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/books', booksRoute);
 app.use('/admin', adminRoutes);
-app.use('/send-pdf', sendPdfRoutes);
 app.use('/request-update', requestUpdateRoute);
 
 // ✅ Manual test email route (optional, safe to keep for now)

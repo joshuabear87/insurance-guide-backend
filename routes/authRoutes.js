@@ -8,12 +8,12 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+router.post('/logout', logoutUser);
 
 // Private Routes (Logged in users only)
 router.get('/me', protect, getUserProfile);
 router.put('/update', protect, updateUserProfile);
 router.post('/refresh', refreshAccessToken);
-router.post('/logout', logoutUser);
-router.post('/reset-password', resetPassword);
 
 export default router;
