@@ -16,7 +16,7 @@ const generateAccessToken = (user, activeFacility) => {
       facilityAccess: user.facilityAccess,
     },
     process.env.JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '3h' }
   );
 };
 
