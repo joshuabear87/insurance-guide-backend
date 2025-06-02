@@ -12,10 +12,10 @@ const facilitySchema = new mongoose.Schema(
       type: String,
     },
     primaryColor: {
-      type: String, // e.g., "#003366" or "#A30D1D"
+      type: String, 
     },
     logoUrl: {
-      type: String, // optional
+      type: String, 
     },
   },
   { timestamps: true }

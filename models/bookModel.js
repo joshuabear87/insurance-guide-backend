@@ -31,7 +31,7 @@ const bookSchema = mongoose.Schema(
     facilityName: {
       type: String,
       required: true,
-      enum: ['Saint Agnes Medical Center', 'Saint Alphonsus Health System'],
+      trim: true
     },
     image: { type: String, default: '' },
     imagePublicId: { type: String, default: '' },

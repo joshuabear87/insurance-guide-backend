@@ -1,19 +1,16 @@
 import express from 'express';
 import multer from 'multer';
-import { protect } from '../middleware/authMiddleware.js';
-import { sendBroadcastEmail, approveFacilityAccess } from '../controllers/authController.js';
+import { protect, isAdmin } from '../middleware/authMiddleware.js';
+import { sendBroadcastEmail } from '../controllers/emailController.js';
+import { approveFacilityAccess } from '../controllers/approvalController.js';
+// import { createFacility } from '../controllers/facilityController.js';
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() }); // file stored in memory
+const upload = multer({ storage: multer.memoryStorage() });
 
-const isAdmin = (req, res, next) => {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-    next();
-  };  
-
-router.post('/broadcast-email', protect, upload.single('attachment'), sendBroadcastEmail);
+// Admin-only system-wide actions
+router.post('/broadcast-email', protect, isAdmin, upload.single('attachment'), sendBroadcastEmail);
 router.post('/approve-facility', protect, isAdmin, approveFacilityAccess);
+// router.post('/facilities', protect, isAdmin, createFacility); // Optional future use
 
 export default router;

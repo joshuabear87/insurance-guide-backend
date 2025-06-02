@@ -1,7 +1,8 @@
-// utils/sendEmail.js
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
-dotenv.config();
+
+if (!process.env.EMAIL_USERNAME || !process.env.EMAIL_PASSWORD) {
+  throw new Error('EMAIL_USERNAME and EMAIL_PASSWORD must be set in .env');
+}
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -21,6 +22,10 @@ const transporter = nodemailer.createTransport({
  * @param {Array} [options.attachments] - Optional attachments
  */
 const sendEmail = async ({ to, subject, text, html, attachments }) => {
+  if (!to || !subject || (!text && !html)) {
+    throw new Error('Email must have a recipient, subject, and content (text or html)');
+  }
+
   const mailOptions = {
     from: `"HokenHub" <${process.env.EMAIL_USERNAME}>`,
     to,
@@ -34,4 +39,5 @@ const sendEmail = async ({ to, subject, text, html, attachments }) => {
   console.log(`📧 Email sent to ${to}: ${info.response}`);
 };
 
+export { transporter };
 export default sendEmail;

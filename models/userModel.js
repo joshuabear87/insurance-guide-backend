@@ -6,12 +6,12 @@ const userSchema = new mongoose.Schema(
     lastName: { type: String, required: true },
     requestedFacility: {
       type: [String],
-      enum: ['Saint Agnes Medical Center', 'Saint Alphonsus Health System'],
+      trim: true,
       required: true,
     },
     facilityAccess: {
       type: [String],
-      enum: ['Saint Agnes Medical Center', 'Saint Alphonsus Health System'],
+      trim: true,
       default: [],
     },
     email: {

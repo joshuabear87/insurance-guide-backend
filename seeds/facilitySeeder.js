@@ -8,20 +8,26 @@ dotenv.config();
 const facilities = [
   {
     name: 'Saint Agnes Medical Center',
-    description: 'Fresno-based hospital',
     primaryColor: '#005b7f',
+    logoUrl: '/logos/samc.png',
   },
   {
     name: 'Saint Alphonsus Health System',
-    description: 'Idaho-based network',
-    primaryColor: '#A30D1D', 
+    primaryColor: '#A30D1D',
+    logoUrl: '/logos/sa.png',
+  },
+  {
+    name: 'St. Luke’s Health Partners', 
+    primaryColor: '#347a2a',
+    logoUrl: '/logos/stlukes.png',
   },
 ];
+
 
 const seedFacilities = async () => {
   try {
     await mongoose.connect(mongoDBURL);
-    await Facility.deleteMany(); // Clear out any old entries
+    await Facility.deleteMany();
     await Facility.insertMany(facilities);
     console.log('✅ Facilities seeded!');
     process.exit();

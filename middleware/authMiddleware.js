@@ -1,11 +1,6 @@
-
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import User from '../models/userModel.js';
 
-dotenv.config();
-
-// Middleware: Protect Routes
 export const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -25,21 +20,28 @@ export const protect = async (req, res, next) => {
     req.user = {
       id: user._id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
       facilityAccess: user.facilityAccess,
       requestedFacility: user.requestedFacility,
-      activeFacility: decoded.activeFacility, // 🛠️ Add this line
+      activeFacility: decoded.activeFacility,
     };
 
     next();
   } catch (err) {
     console.error('❌ Token verification failed:', err.message);
-    res.status(401).json({ message: 'Invalid or expired token' });
+
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired. Please log in again.' });
+    }
+
+    res.status(401).json({ message: 'Invalid token' });
   }
 };
 
-// Middleware: Admin Check
-export const admin = (req, res, next) => {
+// ✅ Renamed for clarity
+export const isAdmin = (req, res, next) => {
   if (!req.user) {
     console.warn('⚠️ No user info attached to request');
     return res.status(401).json({ message: 'Unauthorized' });
