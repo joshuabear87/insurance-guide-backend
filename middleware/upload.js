@@ -31,7 +31,14 @@ const imageUpload = upload.fields([
 const uploadToCloudinary = (fileBuffer) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinaryV2.uploader.upload_stream(
-      { resource_type: 'auto' },
+      {
+        resource_type: 'image',
+        transformation: [
+          { width: 1000, height: 1000, crop: "limit" },
+          { quality: "auto:good" },
+          { fetch_format: "auto" }
+        ]
+      },
       (error, result) => {
         if (error) reject(error);
         else resolve(result);
@@ -41,6 +48,7 @@ const uploadToCloudinary = (fileBuffer) => {
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 };
+
 
 const cloudinaryUpload = async (req, res, next) => {
   if (!req.files || (!req.files.image && !req.files.secondaryImage)) {
