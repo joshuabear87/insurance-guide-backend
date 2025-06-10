@@ -34,9 +34,10 @@ const uploadToCloudinary = (fileBuffer) => {
       {
         resource_type: 'image',
         transformation: [
-          { width: 1000, height: 1000, crop: "limit" },
-          { quality: "auto:good" },
-          { fetch_format: "auto" }
+          { width: 800, height: 800, crop: "limit" },
+          { quality: "auto:low" },
+          { fetch_format: "auto" },
+          { dpr: "auto" }
         ]
       },
       (error, result) => {
