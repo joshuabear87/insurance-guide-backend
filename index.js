@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-
 import { PORT } from './config.js'; // removed mongoDBURL import
 import booksRoute from './routes/booksRoute.js';
 import authRoutes from './routes/authRoutes.js';
@@ -12,8 +11,10 @@ import requestUpdateRoute from './routes/requestUpdateRoute.js';
 import facilityRoutes from './routes/facilityRoutes.js';
 import sendEmail from './util/sendEmail.js';
 import User from './models/userModel.js';
-
 import { connectDB, mongoose } from './util/db.js'; // <- shared connector
+import payerContractRoutes from './routes/payerContractRoutes.js';
+import planNetworkStatusRoutes from './routes/planNetworkStatusRoutes.js';
+import planPolicyRoutes        from './routes/planPolicyRoutes.js';
 
 dotenv.config();
 
@@ -71,6 +72,18 @@ app.use('/users', userRoutes);
 app.use('/books', booksRoute);
 app.use('/admin', adminRoutes);
 app.use('/request-update', requestUpdateRoute);
+app.use('/hub/payer-contracts', payerContractRoutes);
+app.use('/hub/plan-network-statuses', planNetworkStatusRoutes);
+app.use('/hub/plan-policies',        planPolicyRoutes);
+
+app.use((err, req, res, next) => {
+  if (err?.name === 'CastError') {
+    return res.status(400).json({ message: 'Invalid id' });
+  }
+  console.error(err);
+  res.status(500).json({ message: 'Server error' });
+});
+
 
 app.get('/send-test-email', async (_req, res) => {
   try {
@@ -100,6 +113,8 @@ const port = process.env.PORT || PORT;
     // util/db.js reads MONGODB_URI from env; make sure it's set in Render
     await connectDB();
     console.log('✅ App connected to database');
+    console.log('Connected host:', mongoose.connection.host, 'db:', mongoose.connection.name);
+
     app.listen(port, '0.0.0.0', () => {
       console.log(`🚀 API listening on port ${port}`);
     });
